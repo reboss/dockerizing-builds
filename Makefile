@@ -1,3 +1,4 @@
+.PHONY: image clean
 
 clean: .gopath dist
 		rm -rf $^
@@ -11,5 +12,8 @@ dist:
 image:
 		docker build . -t dockerized-build
 
-build: .gopath dist image
+dist/app.out: .gopath dist image
 		docker run --rm -v ${PWD}:/build -v ${PWD}/.gopath:/go dockerized-build bash -c "go get . && go build -buildvcs=false -o ./dist/app.out"
+
+run: dist/app.out
+		docker run --rm -v ${PWD}:/build -v ${PWD}/.gopath:/go dockerized-build $^
