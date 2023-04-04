@@ -1,23 +1,31 @@
-.PHONY: image clean
+.PHONY: clean shell run
 
-clean: .gopath dist
-		rm -rf $^
-
-dist:
-		mkdir -p $@
+clean: .gopath
+		docker run --rm \
+				-v ${PWD}:/build \
+				-v ${PWD}/.gopath:/go \
+				-v ${PWD}/.gocache:/.cache \
+				dockerized-build rm -rf $^
 
 .gopath:
 		mkdir -p $@
 
-image:
+.container: Dockerfile
 		docker build . -t dockerized-build
+		touch $@
 
-GOFILES := $(wildcard ./**/*.go)
-dist/app.out: .gopath dist image $(GOFILES)
+shell: .container
+		docker run --rm -it \
+				-v ${PWD}:/build \
+				-v ${PWD}/.gopath:/go \
+				dockerized-build bash
+
+GOFILES := $(wildcard ./**/*.go) main.go
+dist/app.out: .gopath .container $(GOFILES)
 		docker run --rm \
 				-v ${PWD}:/build \
 				-v ${PWD}/.gopath:/go \
-				dockerized-build bash -c "go get . && go build -buildvcs=false -o ./dist/app.out"
+				dockerized-build ./build.sh
 
 run: dist/app.out
 		docker run --rm -v ${PWD}:/build -v ${PWD}/.gopath:/go dockerized-build $^
